@@ -40,13 +40,21 @@ class HttpRequestActor extends Actor {
 }
 
 class HttpResponseActor extends Actor {
+  final val header_start: String = "HTTP/1.1 200 OK\r\n" +
+    "Server: DeathNikServer\r\n" +
+    "Content-Type: text/html\r\n" +
+    "Content-Length: "
+  final val header_end: String = "\r\n" +
+    "Connection: close\r\n\r\n";
 
   override def receive: Actor.Receive = {
     case sock: Socket =>
       try {
         val out = new PrintStream(sock.getOutputStream)
         val date = new Date()
-        out.println("Received on " + date)
+        val msg = "Received on " + date
+        val msg_len = msg.length
+        out.println(s"$header_start$msg_len$header_end$msg")
         out.close()
       } catch {
         case e: Exception => println(e.getMessage)
