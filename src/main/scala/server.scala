@@ -111,15 +111,14 @@ class HttpResponseActor extends Actor {
     "Content-Type: text/html\r\n" +
     "Content-Length: "
   final val header_end: String = "\r\n" +
-    "Connection: close\r\n\r\n";
+    "Connection: close\r\n\r\n"
 
   override def receive: Actor.Receive = {
     case sock: Socket =>
       try {
         val out = new PrintStream(sock.getOutputStream)
-        val date = new Date()
-        val msg = "Received on " + date
-        val msg_len = msg.length
+        val msg = TolstoyStorage.text
+        val msg_len = TolstoyStorage.len
         out.println(s"$header_start$msg_len$header_end$msg")
         out.close()
       } catch {
