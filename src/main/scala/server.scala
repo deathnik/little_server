@@ -124,17 +124,25 @@ class HttpResponseActor extends Actor {
         val msg = TolstoyStorage.text
         val msg_len = TolstoyStorage.len
         out.println(s"$header_start$msg_len$header_end$msg")
-        out.close()
+        sock.shutdownOutput()
+        self ! CheckSocket
       } catch {
         case e: Exception =>
           println(e.getMessage)
           done()
       }
     case CheckSocket =>
-      if (sock.isClosed)
-        done()
-      else
-        Main.system.scheduler.scheduleOnce(Duration.create(1000, TimeUnit.MILLISECONDS), self, CheckSocket)
+      try {
+        val available = sock.getInputStream.available()
+        sock.getInputStream.skip(available)
+
+        if (sock.getInputStream.read() == -1)
+          done()
+        else
+          Main.system.scheduler.scheduleOnce(Duration.create(1000, TimeUnit.MILLISECONDS), self, CheckSocket)
+      } catch {
+        case e: Exception =>done()
+      }
   }
 
   def done() {
