@@ -3,7 +3,7 @@ import java.net.{Socket, ServerSocket}
 import java.util.{Calendar, Date}
 import java.util.concurrent.TimeUnit
 
-import akka.actor.{ActorRef, Actor, ActorSystem, Props}
+import akka.actor._
 
 import scala.concurrent.duration.Duration
 
@@ -105,6 +105,8 @@ class HttpRequestActor extends Actor {
   }
 }
 
+case object CheckSocket
+
 class HttpResponseActor extends Actor {
   final val header_start: String = "HTTP/1.1 200 OK\r\n" +
     "Server: DeathNikServer\r\n" +
@@ -112,20 +114,32 @@ class HttpResponseActor extends Actor {
     "Content-Length: "
   final val header_end: String = "\r\n" +
     "Connection: close\r\n\r\n"
+  var sock: Socket = null
 
   override def receive: Actor.Receive = {
     case sock: Socket =>
       try {
+        this.sock = sock
         val out = new PrintStream(sock.getOutputStream)
         val msg = TolstoyStorage.text
         val msg_len = TolstoyStorage.len
         out.println(s"$header_start$msg_len$header_end$msg")
         out.close()
       } catch {
-        case e: Exception => println(e.getMessage)
-      } finally {
-        Main.counter ! Dec
-        sock.close()
+        case e: Exception =>
+          println(e.getMessage)
+          done()
       }
+    case CheckSocket =>
+      if (sock.isClosed)
+        done()
+      else
+        Main.system.scheduler.scheduleOnce(Duration.create(1000, TimeUnit.MILLISECONDS), self, CheckSocket)
+  }
+
+  def done() {
+    Main.counter ! Dec
+    sock.close()
+    self ! PoisonPill
   }
 }
