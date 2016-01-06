@@ -57,21 +57,21 @@ object Main {
         val ssChannel: ServerSocketChannel = key.channel().asInstanceOf[ServerSocketChannel]
         val sChannel: SocketChannel = ssChannel.accept()
         sChannel.configureBlocking(false)
-        sChannel.register(key.selector(), SelectionKey.OP_READ)
+        sChannel.register(selectors(cnt % len), SelectionKey.OP_READ)
         cnt += 1
 
         //println("-isAcceptable")
       }
-      if (key.isReadable) {
-
-        //println("+isReadable")
-        val sChannel: SocketChannel = key.channel.asInstanceOf[SocketChannel]
-        val buffer: ByteBuffer = ByteBuffer.wrap(Main.msg.getBytes)
-        sChannel.write(buffer)
-        sChannel.close()
-
-        //println("-isReadable")
-      }
+//      if (key.isReadable) {
+//
+//        //println("+isReadable")
+//        val sChannel: SocketChannel = key.channel.asInstanceOf[SocketChannel]
+//        val buffer: ByteBuffer = ByteBuffer.wrap(Main.msg.getBytes)
+//        sChannel.write(buffer)
+//        sChannel.close()
+//
+//        //println("-isReadable")
+//      }
     }
     cur_state + cnt
   }
@@ -127,13 +127,13 @@ class SelectorActor extends Actor {
       iterator.remove()
       if (key.isReadable) {
 
-        println("+isReadable")
+        //println("+isReadable")
         val sChannel: SocketChannel = key.channel.asInstanceOf[SocketChannel]
         val buffer: ByteBuffer = ByteBuffer.wrap(Main.msg.getBytes)
         sChannel.write(buffer)
         sChannel.close()
 
-        println("-isReadable")
+        //println("-isReadable")
       }
     }
   }
@@ -143,13 +143,13 @@ class SelectorActor extends Actor {
     case i: Int => {
       var loop = true
       while (loop) {
-        if (Main.selectors(i - 1).select <= 0) {
-          //loop = false
+        if (Main.selectors(i - 1).select(100) <= 0) {
+          loop = false
         } else {
           prosess_requests(Main.selectors(i - 1))
         }
       }
-      // Main.system.scheduler.scheduleOnce(Duration.create(10, TimeUnit.MILLISECONDS), self, sel)
+      Main.system.scheduler.scheduleOnce(Duration.create(100, TimeUnit.MILLISECONDS), self, i)
     }
   }
 }
